@@ -44,7 +44,7 @@ func TestParsePriority(t *testing.T) {
 	}
 	for _, test := range tests {
 		prio, rest := parsePriority(test.text)
-		if string(prio) != test.prio {
+		if prio.String() != test.prio {
 			t.Errorf("Text [%s], expected priority [%s], got [%s]", test.text, test.prio, prio)
 		}
 		if rest != test.rest {
@@ -60,11 +60,11 @@ func TestFindTags(t *testing.T) {
 		tags []string
 	}{
 		{ "", '+', nil },
-		{ "(A) Call Mom +Family +PeaceLoveAndHappiness @iphone @phone", '+', []string{"+Family", "+PeaceLoveAndHappiness"} },
-		{ "(A) Call Mom +Family +PeaceLoveAndHappiness @iphone @phone", '@', []string{"@iphone", "@phone"} },
-		{ "+foo+bar", '+', []string{ "+foo+bar", "+bar" } },
+		{ "(A) Call Mom +Family +PeaceLoveAndHappiness @iphone @phone", '+', []string{"Family", "PeaceLoveAndHappiness"} },
+		{ "(A) Call Mom +Family +PeaceLoveAndHappiness @iphone @phone", '@', []string{"iphone", "phone"} },
+		{ "+foo+bar", '+', []string{ "foo+bar", "bar" } },
 		{ "+foo+bar+", '+', nil },
-		{ "++foo+bar", '+', []string{ "++foo+bar", "+foo+bar", "+bar" } },
+		{ "++foo+bar", '+', []string{ "+foo+bar", "foo+bar", "bar" } },
 	}
 
 	for _, test := range tests {
@@ -80,75 +80,250 @@ func TestFindTags(t *testing.T) {
 func TestParseItem(t *testing.T) {
 	tests := []struct{
 		text string
-		// The item's text is filled in automatically by the test harness,
-		// so just leave it empty.
 		item Item
 	}{
-		{ "xhello", Item{} },
-		{ "x hello", Item{Done: true} },
+		{ "xhello", Item{
+			text: "xhello",
+		} },
+
+		{ "x hello", Item{
+			text: "hello",
+			Done: true,
+		} },
 
 		{ "x 2012-12-23 hello", Item{
+			text: "hello",
 			Done: true,
 			FinishDate: d(2012, time.December, 23),
 		} },
 
 		{ "x 2012-12-23 2012-12-20 hello", Item{
+			text: "hello",
 			Done: true,
 			AddedDate: d(2012, time.December, 20),
 			FinishDate: d(2012, time.December, 23),
 		} },
 
 		{ "2012-12-23 2012-12-20 hello", Item{
+			text: "2012-12-20 hello",
 			AddedDate: d(2012, time.December, 23),
 		} },
 
 		{ "(A) 2012-12-23 hello", Item{
-			Priority: PriorityA,
+			text: "hello",
+			Priority: Priority('A'),
 			AddedDate: d(2012, time.December, 23),
 		} },
 
 		{ "(A) 2012-12-23 +hello", Item{
-			Priority: PriorityA,
-			Projects: []string{"+hello"},
+			text: "+hello",
+			Priority: Priority('A'),
+			Projects: []string{"hello"},
 			AddedDate: d(2012, time.December, 23),
 		} },
 
 		{ "(A) +hello", Item{
-			Priority: PriorityA,
-			Projects: []string{"+hello"},
+			text: "+hello",
+			Priority: Priority('A'),
+			Projects: []string{"hello"},
 		} },
 
 		{ "(A) +hello @goodbye Hi there", Item{
-			Priority: PriorityA,
-			Contexts: []string{"@goodbye"},
-			Projects: []string{"+hello"},
+			text: "+hello @goodbye Hi there",
+			Priority: Priority('A'),
+			Contexts: []string{"goodbye"},
+			Projects: []string{"hello"},
 		} },
 
 		{ "(A) +hello +goodbye Hi there", Item{
-			Priority: PriorityA,
-			Projects: []string{"+hello", "+goodbye"},
+			text: "+hello +goodbye Hi there",
+			Priority: Priority('A'),
+			Projects: []string{"hello", "goodbye"},
 		} },
 
 		{ "x 2011-03-02 2011-03-01 Review Tim's pull request +TodoTxtTouch @github", Item {
+			text: "Review Tim's pull request +TodoTxtTouch @github",
 			Done: true,
 			FinishDate: d(2011, time.March, 2),
 			AddedDate: d(2011, time.March, 1),
-			Projects: []string{"+TodoTxtTouch"},
-			Contexts: []string{ "@github" },
+			Projects: []string{"TodoTxtTouch"},
+			Contexts: []string{ "github" },
 		} },
 
 		{ "(A) Call Mom +Family +PeaceLoveAndHappiness @iphone @phone", Item{
-			Priority: PriorityA,
-			Projects: []string{"+Family", "+PeaceLoveAndHappiness"},
-			Contexts: []string{ "@iphone", "@phone"},
+			text: "Call Mom +Family +PeaceLoveAndHappiness @iphone @phone",
+			Priority: Priority('A'),
+			Projects: []string{"Family", "PeaceLoveAndHappiness"},
+			Contexts: []string{ "iphone", "phone"},
 		} },
 	}
 	for _, test := range tests {
-		test.item.Text = test.text
 		item := ParseItem(test.text)
 		if !itemEq(item, &test.item) {
 			t.Errorf("Text [%s], expected\n%#v,\ngot\n%#v", test.text, test.item, *item)
 		}
+	}
+}
+
+func TestRmTags(t *testing.T) {
+	tests := []struct{
+		text string
+		tags []string
+		result string
+	}{
+		{ "+foo bar", []string{"+foo"}, "bar"},
+		{ "+foo +bar", []string{"+foo"}, "+bar"},
+		{ "+foo +bar", []string{"+bar"}, "+foo "},
+		{ "+foo+bar", []string{"+foo"}, "+foo+bar"},
+		{ "foo+bar", []string{"+bar"}, "foo"},
+	}
+	for _, test := range tests {
+		text := test.text
+		for _, tag := range test.tags {
+			text = rmTag(text, tag)
+		}
+		if text != test.result {
+			t.Errorf("Text [%s], removing %v, expected [%s], got [%s]",
+				test.text, test.tags, test.result, text)
+		}
+	}
+}
+
+func TestItem_TextAndString(t *testing.T) {
+	tests := []struct{
+		item Item
+		str, txt string
+	}{
+		{
+			Item{
+				text: "hello",
+				Priority: Priority('A'),
+			},
+			"(A) hello",
+			"hello",
+		},
+		{
+			Item{
+				text: "hello +there",
+				Priority: Priority('A'),
+				Projects: []string{"there"},
+			},
+			"(A) hello +there",
+			"hello +there",
+		},
+		{
+			Item{
+				text: "hello +there",
+				Priority: Priority('A'),
+				Projects: []string{"there", "foo"},
+			},
+			"(A) hello +there +foo",
+			"hello +there +foo",
+		},
+		{
+			Item{
+				text: "hello +there ",
+				Priority: Priority('A'),
+				Projects: []string{"there", "foo"},
+			},
+			"(A) hello +there +foo",
+			"hello +there +foo",
+		},
+		{
+			Item{
+				text: "hello @there",
+				Priority: Priority('A'),
+				Contexts: []string{"there"},
+			},
+			"(A) hello @there",
+			"hello @there",
+		},
+		{
+			Item{
+				text: "hello @there ",
+				Priority: Priority('A'),
+				Contexts: []string{"there", "foo"},
+			},
+			"(A) hello @there @foo",
+			"hello @there @foo",
+		},
+		{
+			Item{
+				Done: true,
+				text: "hello @there ",
+				Priority: Priority('A'),
+				Contexts: []string{"there", "foo"},
+			},
+			"x (A) hello @there @foo",
+			"hello @there @foo",
+		},
+		{
+			Item{
+				Done: true,
+				FinishDate: d(2012, time.December, 23),
+				text: "hello @there ",
+				Priority: Priority('A'),
+				Contexts: []string{"there", "foo"},
+			},
+			"x 2012-12-23 (A) hello @there @foo",
+			"hello @there @foo",
+		},
+		{
+			Item{
+				Done: true,
+				FinishDate: d(2012, time.December, 23),
+				AddedDate: d(2012, time.December, 20),
+				text: "hello @there ",
+				Priority: Priority('A'),
+				Contexts: []string{"there", "foo"},
+			},
+			"x 2012-12-23 (A) 2012-12-20 hello @there @foo",
+			"hello @there @foo",
+		},
+		{
+			Item{
+				text: "+foo @bar +baz @bazm",
+				Priority: Priority('A'),
+				Projects: []string{"foo"},
+				Contexts: []string{"bar"},
+			},
+			"(A) +foo @bar",
+			"+foo @bar",
+		},
+		{
+			Item{
+				text: "+foo+bar +baz",
+				Priority: Priority('A'),
+				Projects: []string{"foo"},
+			},
+			"(A) +foo",
+			"+foo",
+		},
+		{
+			Item{
+				text: "+foo+bar",
+				Projects: []string{"bar"},
+			},
+			"+bar",
+			"+bar",
+		},
+		{
+			Item{
+				text: "a +foo+bar	b	",
+				Projects: []string{"bar"},
+			},
+			"a b	+bar",
+			"a b	+bar",
+		},
+	}
+	for _, test := range tests {
+		if txt := test.item.Text(); txt != test.txt {
+			t.Errorf("Item %v\nexpected text [%s],\ngot [%s]", test.item, test.txt, txt)
+		}
+		if str := test.item.String(); str != test.str {
+			t.Errorf("Item %v\nexpected text [%s],\ngot [%s]", test.item, test.str, str)
+		}
+		
 	}
 }
 
@@ -158,7 +333,7 @@ func itemEq(a, b *Item) bool {
 	sort.Strings(b.Contexts)
 	sort.Strings(a.Projects)
 	sort.Strings(b.Projects)
-	return a.Text == b.Text &&
+	return a.text == b.text &&
 		a.Priority == b.Priority &&
 		reflect.DeepEqual(a.Projects, b.Projects) &&
 		reflect.DeepEqual(a.Contexts, b.Contexts) &&
