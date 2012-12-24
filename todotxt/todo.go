@@ -18,7 +18,7 @@ const (
 	// ContextTag is the rune that begins a context name.
 	ContextTag = '@'
 
-	// KeywordSep is the rune separating a keyword/value binding.
+	// KeywordSep is the rune separating a keyword=value binding.
 	KeywordSep = ':'
 
 	// PriorityRunes is a string of all valid priority runes.
