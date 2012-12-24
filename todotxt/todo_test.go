@@ -105,3 +105,23 @@ func TestKeywords(t *testing.T) {
 		}
 	}
 }
+
+func TestComplete(t *testing.T) {
+	today := time.Now().Format(DateFormat)
+	tests := []struct {
+		text, doneText string
+	}{
+		{"", "x " + today},
+		{"x ", "x "},
+		{"x", "x " + today + " x"}, // No space after initial x: not initially done.
+		{"+foo +bar @baz", "x " + today + " +foo +bar @baz"},
+	}
+	for _, test := range tests {
+		task := MakeTask(test.text)
+		task.Complete()
+		doneText := task.String()
+		if doneText != test.doneText {
+			t.Errorf("Text [%s], expected completed version to be [%s], got [%s]", test.text, test.doneText, doneText)
+		}
+	}
+}

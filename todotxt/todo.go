@@ -5,6 +5,8 @@
 package todotxt
 
 import (
+	"bufio"
+	"io"
 	"strings"
 	"time"
 	"unicode"
@@ -27,6 +29,46 @@ const (
 	// DateFormat is the format string for dates.
 	DateFormat = "2006-01-02"
 )
+
+// File is a todo.txt file.
+type File struct {
+	Tasks []Task
+}
+
+// ReadFile reads a todo.txt file and returns it or an error.
+// Read uses its own internal buffering.
+func ReadFile(in io.Reader) (File, error) {
+	var f File
+	bufIn := bufio.NewReader(in)
+	for {
+		line, err := bufIn.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return File{}, err
+		}
+
+		line = strings.TrimRight(line, "\r\n")
+		f.Tasks = append(f.Tasks, MakeTask(line))
+
+		if err == io.EOF {
+			break
+		}
+	}
+	return f, nil
+}
+
+// WriteTo writes the File to the given Writer, implementing
+// the io.WriterTo interface.
+func (f *File) WriteTo(out io.Writer) (int64, error) {
+	var tot int64
+	for _, t := range f.Tasks {
+		n, err := io.WriteString(out, t.String()+"\n")
+		tot += int64(n)
+		if err != nil {
+			return tot, err
+		}
+	}
+	return tot, nil
+}
 
 // A Task is a single line of a todo.txt file.
 type Task struct {
@@ -97,14 +139,32 @@ func parsePriority(s string) (rune, string) {
 	return prio, s
 }
 
+// String returns the single-line string representation of this task.
+func (t *Task) String() string {
+	return t.text
+}
+
 // Priority returns the task's priority value rune or the zero rune if
 // the task does not have a priority.
 func (t *Task) Priority() rune {
 	return t.prio
 }
 
-// Done returns true if this task is completed.
-func (t *Task) Done() bool {
+// Complete marks the task as complete.
+func (t *Task) Complete() {
+	if t.IsDone() {
+		return
+	}
+	fmt := DateFormat
+	if t.text != "" {
+		fmt += " "
+	}
+	prefix := "x " + time.Now().Format(fmt)
+	*t = MakeTask(prefix + t.text)
+}
+
+// IsDone returns true if this task is completed.
+func (t *Task) IsDone() bool {
 	return t.done
 }
 
