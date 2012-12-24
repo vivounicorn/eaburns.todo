@@ -70,3 +70,36 @@ func TestTags(t *testing.T) {
 		}
 	}
 }
+
+func TestKeywords(t *testing.T) {
+	tests := []struct {
+		text string
+		kwds map[string]string
+	}{
+		{"", map[string]string{}},
+		{"due:2012-12-23", map[string]string{
+			"due": "2012-12-23",
+		}},
+		{"due:2012-12-23 due:2012-12-24", map[string]string{
+			"due": "2012-12-24",
+		}},
+		{"foo:bar baz:zap", map[string]string{
+			"foo": "bar",
+			"baz": "zap",
+		}},
+	}
+	for _, test := range tests {
+		task := MakeTask(test.text)
+		kwds := task.Keywords()
+		if len(kwds) != len(test.kwds) {
+			t.Errorf("Text [%s] expected %d keywords, got %d", test.text, len(test.kwds), len(kwds))
+		}
+		for key, val := range kwds {
+			if v, ok := test.kwds[key]; !ok {
+				t.Errorf("Text [%s] unexpected keyword %s", test.text, key)
+			} else if v != val {
+				t.Errorf("Text [%s] expected %s:%s, got %s:%s", test.text, key, v, key, val)
+			}
+		}
+	}
+}

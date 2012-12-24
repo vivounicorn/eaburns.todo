@@ -141,7 +141,9 @@ func tagEnd(r rune) bool {
 	return unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_'
 }
 
-// Keywords returns a mapping of all <keyword>:<value> pairs in this task.
+// Keywords returns a mapping of <keyword>:<value> pairs in this task.
+// If there are multiple assignments to the same keyword then only the
+// last one is returned.
 func (t *Task) Keywords() map[string]string {
 	kwds := make(map[string]string)
 	for _, f := range strings.Fields(t.text) {
