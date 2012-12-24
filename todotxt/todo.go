@@ -30,7 +30,11 @@ const (
 
 // A Task is a single line of a todo.txt file.
 type Task struct {
-	text string
+	text                 string
+	fields               []string
+	done                 bool
+	prio                 rune
+	createDate, doneDate time.Time
 }
 
 // MakeTask returns a task for the given text.  If the text contains
@@ -38,41 +42,17 @@ type Task struct {
 func MakeTask(text string) Task {
 	text = strings.Replace(text, "\r\n", " ", -1)
 	text = strings.Replace(text, "\n", " ", -1)
-	return Task{text}
-}
 
-// Done returns true if the task is marked as done, otherwise false.
-// If the task is done and has a completion date than that is returned
-// as the second argument, otherwise the second argument is the
-// zero time.
-func (t *Task) Done() (bool, time.Time) {
-	d, doneDate, _, _ := t.header()
-	return d, doneDate
-}
+	t := Task{text: text, fields: strings.Fields(text)}
 
-// Priority returns the priority string for this task.
-func (t *Task) Priority() string {
-	_, _, prio, _ := t.header()
-	return prio
-}
-
-// CreationDate returns the creation date for this task, if it does not
-// have a creation date than the zero time is returned.
-func (t *Task) CreationDate() time.Time {
-	_, _, _, addDate := t.header()
-	return addDate
-}
-
-// Heaheaderder returns the header information from the task.
-func (t *Task) header() (d bool, dDate time.Time, p string, cDate time.Time) {
-	txt := t.text
-	d, txt = parseDone(txt)
-	if d {
-		dDate, txt = parseDate(txt)
+	t.done, text = parseDone(text)
+	if t.done {
+		t.doneDate, text = parseDate(text)
 	}
-	p, txt = parsePriority(txt)
-	cDate, _ = parseDate(txt)
-	return
+	t.prio, text = parsePriority(text)
+	t.createDate, _ = parseDate(text)
+
+	return t
 }
 
 // ParseDone returns the completed status from the string and the
@@ -105,16 +85,39 @@ func parseDate(s string) (time.Time, string) {
 // ParsePriority parses a priority value from the string and returns it and
 // the rest of the string. If the string doesn't begin with a priority then
 // an empty string.
-func parsePriority(s string) (string, string) {
+func parsePriority(s string) (rune, string) {
 	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(PrioRunes, rune(s[1])) || s[2] != ')' {
-		return "", s
+		return rune(0), s
 	}
-	prio := s[1:2]
+	prio := rune(s[1])
 	s = s[3:]
 	if len(s) >= 1 && s[0] == ' ' {
 		s = s[1:]
 	}
 	return prio, s
+}
+
+// Priority returns the task's priority value rune or the zero rune if
+// the task does not have a priority.
+func (t *Task) Priority() rune {
+	return t.prio
+}
+
+// Done returns true if this task is completed.
+func (t *Task) Done() bool {
+	return t.done
+}
+
+// DoneDate returns the completion date if this task is done and
+// included such a date.  Otherwise, the zero time is returned.
+func (t *Task) DoneDate() time.Time {
+	return t.doneDate
+}
+
+// CreateDate returns the creation date if specified.  Otherwise, the
+// zero time is returned.
+func (t *Task) CreateDate() time.Time {
+	return t.createDate
 }
 
 // Tags returns all tag with the given marker rune.
@@ -124,7 +127,7 @@ func parsePriority(s string) (string, string) {
 // Contexts are tags that begin with '@'.
 func (t *Task) Tags(marker rune) []string {
 	var tags []string
-	for _, f := range strings.Fields(t.text) {
+	for _, f := range t.fields {
 		if first, _ := utf8.DecodeRuneInString(f); first != marker {
 			continue
 		}
@@ -146,7 +149,7 @@ func tagEnd(r rune) bool {
 // last one is returned.
 func (t *Task) Keywords() map[string]string {
 	kwds := make(map[string]string)
-	for _, f := range strings.Fields(t.text) {
+	for _, f := range t.fields {
 		i := strings.IndexRune(f, KeywordSep)
 		if i < 0 {
 			continue

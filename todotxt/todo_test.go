@@ -9,36 +9,35 @@ import (
 	"time"
 )
 
-func TestHeader(t *testing.T) {
+func TestMakeTask(t *testing.T) {
 	tests := []struct {
-		text              string
-		done              bool
-		prio              string
-		doneDate, addDate time.Time
+		text                 string
+		done                 bool
+		prio                 rune
+		doneDate, createDate time.Time
 	}{
-		{"", false, "", time.Time{}, time.Time{}},
-		{"x ", true, "", time.Time{}, time.Time{}},
-		{"x 2012-12-23", true, "", d(2012, time.December, 23), time.Time{}},
-		{"x 2012-12-23 (A)", true, "A", d(2012, time.December, 23), time.Time{}},
-		{"x 2012-12-23 (A) 2012-12-20", true, "A", d(2012, time.December, 23), d(2012, time.December, 20)},
-		{"2012-12-23 (A) 2012-12-20", false, "", time.Time{}, d(2012, time.December, 23)},
-		{"x (A) 2012-12-20", true, "A", time.Time{}, d(2012, time.December, 20)},
-		{"x 2012-12-23 2012-12-20", true, "", d(2012, time.December, 23), d(2012, time.December, 20)},
+		{"", false, rune(0), time.Time{}, time.Time{}},
+		{"x ", true, rune(0), time.Time{}, time.Time{}},
+		{"x 2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
+		{"x 2012-12-23 (A)", true, 'A', d(2012, time.December, 23), time.Time{}},
+		{"x 2012-12-23 (A) 2012-12-20", true, 'A', d(2012, time.December, 23), d(2012, time.December, 20)},
+		{"2012-12-23 (A) 2012-12-20", false, rune(0), time.Time{}, d(2012, time.December, 23)},
+		{"x (A) 2012-12-20", true, 'A', time.Time{}, d(2012, time.December, 20)},
+		{"x 2012-12-23 2012-12-20", true, rune(0), d(2012, time.December, 23), d(2012, time.December, 20)},
 	}
 	for _, test := range tests {
-		task := &Task{text: test.text}
-		done, doneDate, prio, addDate := task.header()
-		if done != test.done {
-			t.Errorf("Text [%s] expected done %t, got %t", test.text, test.done, done)
+		task := MakeTask(test.text)
+		if task.done != test.done {
+			t.Errorf("Text [%s] expected done %t, got %t", test.text, test.done, task.done)
 		}
-		if prio != test.prio {
-			t.Errorf("Text [%s] expected prio %s, got %s", test.text, test.prio, prio)
+		if task.prio != test.prio {
+			t.Errorf("Text [%s] expected prio %s, got %s", test.text, test.prio, task.prio)
 		}
-		if !doneDate.Equal(test.doneDate) {
-			t.Errorf("Text [%s] expected doneDate %s, got %s", test.text, test.doneDate, doneDate)
+		if !task.doneDate.Equal(test.doneDate) {
+			t.Errorf("Text [%s] expected doneDate %s, got %s", test.text, test.doneDate, task.doneDate)
 		}
-		if !addDate.Equal(test.addDate) {
-			t.Errorf("Text [%s] expected addDate %s, got %s", test.text, test.addDate, addDate)
+		if !task.createDate.Equal(test.createDate) {
+			t.Errorf("Text [%s] expected createDate %s, got %s", test.text, test.createDate, task.createDate)
 		}
 	}
 }
@@ -61,7 +60,7 @@ func TestTags(t *testing.T) {
 		{"+foo+ +bar", '+', []string{"+bar"}},
 	}
 	for _, test := range tests {
-		task := &Task{text: test.text}
+		task := MakeTask(test.text)
 		tags := task.Tags(test.marker)
 		sort.Strings(tags)
 		sort.Strings(test.tags)
