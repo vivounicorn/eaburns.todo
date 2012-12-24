@@ -135,11 +135,36 @@ func (lw *listWin) refresh() {
 
 	sort.Sort(sorter{inds, file.Tasks, lw.less})
 
+	projs := make(map[string]bool)
+	ctxs := make(map[string]bool)
+
 	for _, i := range inds {
 		task := file.Tasks[i]
 		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i, task.String()); err != nil {
 			die(1, "Failed to refresh window %s: %s", lw.title, err)
 		}
+		for _, t := range task.Tags(todotxt.ProjectTag) {
+			projs[t] = true
+		}
+		for _, t := range task.Tags(todotxt.ContextTag) {
+			ctxs[t] = true
+		}
+	}
+
+	if err := lw.Ctl("cleartag"); err != nil {
+		die(1, "Failed to write cleartag to %s ctl: %s", lw.title, err)
+	}
+
+	tag := "Sort \n"
+	for p := range projs {
+		tag += p + " "
+	}
+	tag += "\n"
+	for c := range ctxs {
+		tag += c + " "
+	}
+	if err := lw.Fprintf("tag", " %s", strings.TrimSpace(tag)); err != nil {
+		die(1, "Failed to write to the tag of %s: %s", lw.title, err)
 	}
 
 	if err := lw.Addr("#0"); err != nil {
