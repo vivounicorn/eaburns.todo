@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -39,39 +38,41 @@ func newListWin(filters []string) {
 func (lw *listWin) events() {
 	defer wg.Done()
 	for ev := range lw.EventChan() {
-		if ev.C2 != 'x' && ev.C2 != 'X' {
-			continue
-		}
-
-		fs := strings.Fields(string(ev.Text))
-
-		if (ev.Flag & 0x1) != 0 { // acme command
+		switch {
+		case ev.C2 == 'l' || ev.C2 == 'L':
 			if err := lw.WriteEvent(ev); err != nil {
 				die(1, "Failed to write an event to %s: %s", lw.title, err)
 			}
-			if len(fs) > 0 && fs[0] == "Del" {
-				return
-			}
-		}
 
-		ok := true
-		for _, f := range fs {
-			if f[0] != todotxt.ProjectTag && f[0] != todotxt.ContextTag {
-				ok = false
+		case ev.C2 == 'x' || ev.C2 == 'X':
+			fs := strings.Fields(string(ev.Text))
+			if (ev.Flag & 0x1) != 0 { // acme command
+				if err := lw.WriteEvent(ev); err != nil {
+					die(1, "Failed to write an event to %s: %s", lw.title, err)
+				}
+				if len(fs) > 0 && fs[0] == "Del" {
+					return
+				}
 			}
-			l, _ := utf8.DecodeLastRuneInString(f)
-			if !unicode.IsLetter(l) && !unicode.IsDigit(l) && l != '_' {
-				ok = false
+			if filterOk(fs) {
+				newListWin(fs)
 			}
-			if !ok {
-				log.Printf("Bad tag: %s", f)
-				break
-			}
-		}
-		if ok {
-			newListWin(fs)
 		}
 	}
+}
+
+// FilterOk returns true if every element of the slice is a valid filter tag.
+func filterOk(fs []string) bool {
+	for _, f := range fs {
+		if f[0] != todotxt.ProjectTag && f[0] != todotxt.ContextTag {
+			return false
+		}
+		l, _ := utf8.DecodeLastRuneInString(f)
+		if !unicode.IsLetter(l) && !unicode.IsDigit(l) && l != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 // Refresh refreshes the window's body by re-parsing the file.
@@ -90,5 +91,17 @@ func (lw *listWin) refresh() {
 		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i, task.String()); err != nil {
 			die(1, "Failed to refresh window %s: %s", lw.title, err)
 		}
+	}
+	if err := lw.Addr("#0"); err != nil {
+		die(1, "Failed to write address to %s: %s", lw.title, err)
+	}
+	if err := lw.Ctl("dot=addr"); err != nil {
+		die(1, "Failed to write dot=addr to %s ctl: %s", lw.title, err)
+	}
+	if err := lw.Ctl("show"); err != nil {
+		die(1, "Failed to write show to %s ctl: %s", lw.title, err)
+	}
+	if err := lw.Ctl("clean"); err != nil {
+		die(1, "Failed to write clean to %s ctl: %s", lw.title, err)
 	}
 }
