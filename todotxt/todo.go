@@ -168,15 +168,15 @@ func (t *Task) IsDone() bool {
 	return t.done
 }
 
-// DoneDate returns the completion date if this task is done and
+// CompletionDate returns the completion date if this task is done and
 // included such a date.  Otherwise, the zero time is returned.
-func (t *Task) DoneDate() time.Time {
+func (t *Task) CompletionDate() time.Time {
 	return t.doneDate
 }
 
-// CreateDate returns the creation date if specified.  Otherwise, the
+// CreationDate returns the creation date if specified.  Otherwise, the
 // zero time is returned.
-func (t *Task) CreateDate() time.Time {
+func (t *Task) CreationDate() time.Time {
 	return t.createDate
 }
 
