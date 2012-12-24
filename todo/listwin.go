@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -18,6 +20,7 @@ type listWin struct {
 	*acme.Win
 	title   string
 	filters []string
+	less    func([]todotxt.Task, int, int) bool
 }
 
 // NewListWin creates a new list window for this set of filters.
@@ -27,10 +30,33 @@ func newListWin(filters []string) {
 	if err != nil {
 		die(1, "Failed to create a new window %s: %s", title, err)
 	}
-	lw := &listWin{win, title, filters}
+	lw := &listWin{
+		Win:     win,
+		title:   title,
+		filters: filters,
+		less:    lessFuncs["line"],
+	}
 	wg.Add(1)
 	go lw.events()
 	lw.refresh()
+}
+
+// lessFuncs is a map of less functions for sorting
+var lessFuncs = map[string]func([]todotxt.Task, int, int) bool{
+	"line": func(_ []todotxt.Task, i, j int) bool {
+		return i < j
+	},
+	"prio": func(ts []todotxt.Task, i, j int) bool {
+		switch a, b := ts[i], ts[j]; {
+		case !a.IsDone() && b.IsDone():
+			return true
+		case a.IsDone() && !b.IsDone():
+			return false
+		case a.Priority() != b.Priority():
+			return a.Priority() < b.Priority()
+		}
+		return i < j
+	},
 }
 
 // Events deals with the window events, meant to be run in a
@@ -46,6 +72,22 @@ func (lw *listWin) events() {
 
 		case ev.C2 == 'x' || ev.C2 == 'X':
 			fs := strings.Fields(string(ev.Text))
+			if len(fs) >= 1 && fs[0] == "Sort" {
+				if len(fs) > 1 {
+					if less, ok := lessFuncs[fs[1]]; ok {
+						lw.less = less
+						lw.refresh()
+						continue
+					}
+				}
+				lst := ""
+				for n := range lessFuncs {
+					lst += n + " "
+				}
+				lst = strings.TrimSpace(lst)
+				fmt.Fprintln(os.Stderr, "Valid sort functions are:", lst)
+				continue
+			}
 			if (ev.Flag & 0x1) != 0 { // acme command
 				if err := lw.WriteEvent(ev); err != nil {
 					die(1, "Failed to write an event to %s: %s", lw.title, err)
@@ -77,6 +119,7 @@ func filterOk(fs []string) bool {
 
 // Refresh refreshes the window's body by re-parsing the file.
 func (lw *listWin) refresh() {
+	var inds []int
 	for i, task := range file.Tasks {
 		ok := true
 		for _, filter := range lw.filters {
@@ -85,13 +128,20 @@ func (lw *listWin) refresh() {
 				break
 			}
 		}
-		if !ok {
-			continue
+		if ok {
+			inds = append(inds, i)
 		}
+	}
+
+	sort.Sort(sorter{inds, file.Tasks, lw.less})
+
+	for _, i := range inds {
+		task := file.Tasks[i]
 		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i, task.String()); err != nil {
 			die(1, "Failed to refresh window %s: %s", lw.title, err)
 		}
 	}
+
 	if err := lw.Addr("#0"); err != nil {
 		die(1, "Failed to write address to %s: %s", lw.title, err)
 	}
@@ -104,4 +154,23 @@ func (lw *listWin) refresh() {
 	if err := lw.Ctl("clean"); err != nil {
 		die(1, "Failed to write clean to %s ctl: %s", lw.title, err)
 	}
+}
+
+// A sorter sorts the indices using the less function from the listWin.
+type sorter struct {
+	inds  []int
+	tasks []todotxt.Task
+	less  func([]todotxt.Task, int, int) bool
+}
+
+func (s sorter) Len() int {
+	return len(s.inds)
+}
+
+func (s sorter) Swap(i, j int) {
+	s.inds[i], s.inds[j] = s.inds[j], s.inds[i]
+}
+
+func (s sorter) Less(i, j int) bool {
+	return s.less(s.tasks, s.inds[i], s.inds[j])
 }
