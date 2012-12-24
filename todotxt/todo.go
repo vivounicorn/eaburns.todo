@@ -1,6 +1,8 @@
 // © 2012 Ethan Burns under the MIT license.
 
-package todo
+// Todotxt is a package for using todo.txt formatted files.
+// See http://todotxt.com/ for more details.
+package todotxt
 
 import (
 	"strings"
@@ -26,33 +28,43 @@ const (
 	dateFormat = "2006-01-02"
 )
 
-// An Item is a single line of a todo.txt file.
-type Item struct {
+// A Task is a single line of a todo.txt file.
+type Task struct {
 	LineNo int
 	Text   string
 }
 
-// Done returns true if the item is marked as done.
-func (item *Item) Done() bool {
-	d, _ := parseDone(item.Text)
-	return d
+// Done returns true if the task is marked as done, otherwise false.
+// If the task is done and has a completion date than that is returned
+// as the second argument, otherwise the second argument is the
+// zero time.
+func (t *Task) Done() (bool, time.Time) {
+	d, doneDate, _, _ := t.header()
+	return d, doneDate
 }
 
-// Priority returns the priority string for this item.
-func (item *Item) Priority() string {
-	_, prio, _, _ := item.Header()
+// Priority returns the priority string for this task.
+func (t *Task) Priority() string {
+	_, _, prio, _ := t.header()
 	return prio
 }
 
-// Header returns the header information from the item.
-func (item *Item) Header() (done bool, prio string, doneDate, addDate time.Time) {
-	text := item.Text
-	done, text = parseDone(text)
-	if done {
-		doneDate, text = parseDate(text)
+// CreationDate returns the creation date for this task, if it does not
+// have a creation date than the zero time is returned.
+func (t *Task) CreationDate() time.Time {
+	_, _, _, addDate := t.header()
+	return addDate
+}
+
+// Heaheaderder returns the header information from the task.
+func (t *Task) header() (d bool, dDate time.Time, p string, cDate time.Time) {
+	txt := t.Text
+	d, txt = parseDone(txt)
+	if d {
+		dDate, txt = parseDate(txt)
 	}
-	prio, text = parsePriority(text)
-	addDate, _ = parseDate(text)
+	p, txt = parsePriority(txt)
+	cDate, _ = parseDate(txt)
 	return
 }
 
@@ -98,21 +110,21 @@ func parsePriority(s string) (string, string) {
 	return prio, s
 }
 
-// Projects returns a slice of all projects for this item.
-func (item *Item) Projects() []string {
-	return item.tags(projectMarker)
+// Projects returns a slice of all projects for this task.
+func (t *Task) Projects() []string {
+	return t.tags(projectMarker)
 }
 
-// Contexts returns a slice of all contexts for this item.
-func (item *Item) Contexts() []string {
-	return item.tags(contextMarker)
+// Contexts returns a slice of all contexts for this task.
+func (t *Task) Contexts() []string {
+	return t.tags(contextMarker)
 }
 
-// Tags returns all tags in the text of the item that begin with the
+// Tags returns all tags in the text of the task that begin with the
 // given marker.
-func (item *Item) tags(marker rune) []string {
+func (t *Task) tags(marker rune) []string {
 	var tags []string
-	for _, f := range strings.Fields(item.Text) {
+	for _, f := range strings.Fields(t.Text) {
 		if first, _ := utf8.DecodeRuneInString(f); first != marker {
 			continue
 		}
@@ -129,10 +141,10 @@ func tagEnd(r rune) bool {
 	return unicode.IsDigit(r) || unicode.IsLetter(r) || r == '_'
 }
 
-// Keywords returns a mapping of all <keyword>:<value> pairs in this item.
-func (item *Item) Keywords() map[string]string {
+// Keywords returns a mapping of all <keyword>:<value> pairs in this task.
+func (t *Task) Keywords() map[string]string {
 	kwds := make(map[string]string)
-	for _, f := range strings.Fields(item.Text) {
+	for _, f := range strings.Fields(t.Text) {
 		i := strings.IndexRune(f, keywordSep)
 		if i < 0 {
 			continue

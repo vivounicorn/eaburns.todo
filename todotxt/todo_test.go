@@ -1,6 +1,6 @@
 // © 2012 Ethan Burns under the MIT license.
 
-package todo
+package todotxt
 
 import (
 	"reflect"
@@ -14,7 +14,7 @@ func TestHeader(t *testing.T) {
 		text              string
 		done              bool
 		prio              string
-		doneTime, addTime time.Time
+		doneDate, addDate time.Time
 	}{
 		{"", false, "", time.Time{}, time.Time{}},
 		{"x ", true, "", time.Time{}, time.Time{}},
@@ -26,19 +26,19 @@ func TestHeader(t *testing.T) {
 		{"x 2012-12-23 2012-12-20", true, "", d(2012, time.December, 23), d(2012, time.December, 20)},
 	}
 	for _, test := range tests {
-		item := &Item{Text: test.text}
-		done, prio, doneTime, addTime := item.Header()
+		task := &Task{Text: test.text}
+		done, doneDate, prio, addDate := task.header()
 		if done != test.done {
 			t.Errorf("Text [%s] expected done %t, got %t", test.text, test.done, done)
 		}
 		if prio != test.prio {
 			t.Errorf("Text [%s] expected prio %s, got %s", test.text, test.prio, prio)
 		}
-		if !doneTime.Equal(test.doneTime) {
-			t.Errorf("Text [%s] expected doneTime %s, got %s", test.text, test.doneTime, doneTime)
+		if !doneDate.Equal(test.doneDate) {
+			t.Errorf("Text [%s] expected doneDate %s, got %s", test.text, test.doneDate, doneDate)
 		}
-		if !addTime.Equal(test.addTime) {
-			t.Errorf("Text [%s] expected addTime %s, got %s", test.text, test.addTime, addTime)
+		if !addDate.Equal(test.addDate) {
+			t.Errorf("Text [%s] expected addDate %s, got %s", test.text, test.addDate, addDate)
 		}
 	}
 }
@@ -61,8 +61,8 @@ func TestTags(t *testing.T) {
 		{"+foo+ +bar", '+', []string{"+bar"}},
 	}
 	for _, test := range tests {
-		item := &Item{Text: test.text}
-		tags := item.tags(test.marker)
+		task := &Task{Text: test.text}
+		tags := task.tags(test.marker)
 		sort.Strings(tags)
 		sort.Strings(test.tags)
 		if !reflect.DeepEqual(tags, test.tags) {
