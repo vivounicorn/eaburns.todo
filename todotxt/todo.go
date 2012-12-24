@@ -70,6 +70,35 @@ func (f *File) WriteTo(out io.Writer) (int64, error) {
 	return tot, nil
 }
 
+// Tags returns all tags beginning with the given marker that appear
+// in this file.
+func (f *File) Tags(marker rune) []string {
+	var tags []string
+	seen := make(map[string]bool)
+	for _, task := range f.Tasks {
+		for _, tag := range task.Tags(marker) {
+			if !seen[tag] {
+				tags = append(tags, tag)
+			}
+		}
+	}
+	return tags
+}
+
+// Keywords returns all keywords that appear in this file.
+func (f *File) Keywords() []string {
+	var kwds []string
+	seen := make(map[string]bool)
+	for _, task := range f.Tasks {
+		for key := range task.Keywords() {
+			if !seen[key] {
+				kwds = append(kwds, key)
+			}
+		}
+	}
+	return kwds
+}
+
 // A Task is a single line of a todo.txt file.
 type Task struct {
 	text                 string
@@ -185,6 +214,8 @@ func (t *Task) CreationDate() time.Time {
 // rune and ends with an alphanumeric or '_' rune.
 // Projects are tags that begin with '+'.
 // Contexts are tags that begin with '@'.
+// Tags are returned in the order in which they appear from left to right,
+// and if a tag appears multiple times then it is returned multiple times.
 func (t *Task) Tags(marker rune) []string {
 	var tags []string
 	for _, f := range t.fields {
@@ -197,6 +228,20 @@ func (t *Task) Tags(marker rune) []string {
 		tags = append(tags, f)
 	}
 	return tags
+}
+
+// HasTag returns true if the task has the given tag, which must be
+// preceeded by its marker, as in +foo.  If the argument is not a valid
+// tag (i.e., if it does not end in an alphanumeric or '_') then HasTag
+// returns false.
+func (t *Task) HasTag(tag string) bool {
+	marker, _ := utf8.DecodeRuneInString(tag)
+	for _, tg := range t.Tags(marker) {
+		if tg == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // TagEnd returns true for runes that are valid tag ends.
