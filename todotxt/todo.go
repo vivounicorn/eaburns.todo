@@ -21,8 +21,8 @@ const (
 	// KeywordSep is the rune separating a keyword/value binding.
 	KeywordSep = ':'
 
-	// PrioRunes is a string of all valid priority runes.
-	PrioRunes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	// PriorityRunes is a string of all valid priority runes.
+	PriorityRunes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	// DateFormat is the format string for dates.
 	DateFormat = "2006-01-02"
@@ -86,7 +86,7 @@ func parseDate(s string) (time.Time, string) {
 // the rest of the string. If the string doesn't begin with a priority then
 // an empty string.
 func parsePriority(s string) (rune, string) {
-	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(PrioRunes, rune(s[1])) || s[2] != ')' {
+	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(PriorityRunes, rune(s[1])) || s[2] != ')' {
 		return rune(0), s
 	}
 	prio := rune(s[1])
