@@ -28,6 +28,9 @@ const (
 
 	// DateFormat is the format string for dates.
 	DateFormat = "2006-01-02"
+
+	// NoPriority is the rune returned if there is no priority.
+	NoPriority = rune('Z' + 1)
 )
 
 // File is a todo.txt file.
@@ -80,6 +83,7 @@ func (f *File) Tags(marker rune) []string {
 			if !seen[tag] {
 				tags = append(tags, tag)
 			}
+			seen[tag] = true
 		}
 	}
 	return tags
@@ -94,6 +98,7 @@ func (f *File) Keywords() []string {
 			if !seen[key] {
 				kwds = append(kwds, key)
 			}
+			seen[key] = true
 		}
 	}
 	return kwds
@@ -155,10 +160,10 @@ func parseDate(s string) (time.Time, string) {
 
 // ParsePriority parses a priority value from the string and returns it and
 // the rest of the string. If the string doesn't begin with a priority then
-// an empty string.
+// NoPriority is returned.
 func parsePriority(s string) (rune, string) {
 	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(PriorityRunes, rune(s[1])) || s[2] != ')' {
-		return rune(0), s
+		return NoPriority, s
 	}
 	prio := rune(s[1])
 	s = s[3:]
@@ -173,7 +178,7 @@ func (t *Task) String() string {
 	return t.text
 }
 
-// Priority returns the task's priority value rune or the zero rune if
+// Priority returns the task's priority value rune or the NoPriority rune if
 // the task does not have a priority.
 func (t *Task) Priority() rune {
 	return t.prio

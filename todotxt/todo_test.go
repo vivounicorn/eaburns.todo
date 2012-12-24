@@ -16,17 +16,17 @@ func TestMakeTask(t *testing.T) {
 		prio                 rune
 		doneDate, createDate time.Time
 	}{
-		{"", false, rune(0), time.Time{}, time.Time{}},
-		{"x ", true, rune(0), time.Time{}, time.Time{}},
-		{"x 2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
+		{"", false, NoPriority, time.Time{}, time.Time{}},
+		{"x ", true, NoPriority, time.Time{}, time.Time{}},
+		{"x 2012-12-23", true, NoPriority, d(2012, time.December, 23), time.Time{}},
 		{"x 2012-12-23 (A)", true, 'A', d(2012, time.December, 23), time.Time{}},
 		{"x 2012-12-23 (A) 2012-12-20", true, 'A', d(2012, time.December, 23), d(2012, time.December, 20)},
-		{"2012-12-23 (A) 2012-12-20", false, rune(0), time.Time{}, d(2012, time.December, 23)},
+		{"2012-12-23 (A) 2012-12-20", false, NoPriority, time.Time{}, d(2012, time.December, 23)},
 		{"x (A) 2012-12-20", true, 'A', time.Time{}, d(2012, time.December, 20)},
-		{"x 2012-12-23 2012-12-20", true, rune(0), d(2012, time.December, 23), d(2012, time.December, 20)},
-		{"x\n2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
-		{"x\r\n2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
-		{"x\r\n2012-12-23\n2012-12-20", true, rune(0), d(2012, time.December, 23), d(2012, time.December, 20)},
+		{"x 2012-12-23 2012-12-20", true, NoPriority, d(2012, time.December, 23), d(2012, time.December, 20)},
+		{"x\n2012-12-23", true, NoPriority, d(2012, time.December, 23), time.Time{}},
+		{"x\r\n2012-12-23", true, NoPriority, d(2012, time.December, 23), time.Time{}},
+		{"x\r\n2012-12-23\n2012-12-20", true, NoPriority, d(2012, time.December, 23), d(2012, time.December, 20)},
 	}
 	for _, test := range tests {
 		task := MakeTask(test.text)
@@ -34,7 +34,7 @@ func TestMakeTask(t *testing.T) {
 			t.Errorf("Text [%s] expected done %t, got %t", test.text, test.done, task.done)
 		}
 		if task.prio != test.prio {
-			t.Errorf("Text [%s] expected prio %s, got %s", test.text, test.prio, task.prio)
+			t.Errorf("Text [%s] expected prio %c, got %c", test.text, test.prio, task.prio)
 		}
 		if !task.doneDate.Equal(test.doneDate) {
 			t.Errorf("Text [%s] expected doneDate %s, got %s", test.text, test.doneDate, task.doneDate)
