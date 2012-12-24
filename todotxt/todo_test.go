@@ -24,6 +24,9 @@ func TestMakeTask(t *testing.T) {
 		{"2012-12-23 (A) 2012-12-20", false, rune(0), time.Time{}, d(2012, time.December, 23)},
 		{"x (A) 2012-12-20", true, 'A', time.Time{}, d(2012, time.December, 20)},
 		{"x 2012-12-23 2012-12-20", true, rune(0), d(2012, time.December, 23), d(2012, time.December, 20)},
+		{"x\n2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
+		{"x\r\n2012-12-23", true, rune(0), d(2012, time.December, 23), time.Time{}},
+		{"x\r\n2012-12-23\n2012-12-20", true, rune(0), d(2012, time.December, 23), d(2012, time.December, 20)},
 	}
 	for _, test := range tests {
 		task := MakeTask(test.text)
