@@ -97,7 +97,21 @@ func (lw *listWin) events() {
 				}
 			}
 			if filterOk(fs) {
-				newListWin(fs)
+				fsNew := make([]string, len(lw.filters))
+				copy(fsNew, lw.filters)
+				for _, f := range fs {
+					found := false
+					for _, f2 := range fsNew {
+						if f == f2 {
+							found = true
+							break
+						}
+					}
+					if !found {
+						fsNew = append(fsNew, f)
+					}
+				}
+				newListWin(fsNew)
 			}
 		}
 	}
