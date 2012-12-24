@@ -30,6 +30,9 @@ func newListWin(filters []string) {
 	if err != nil {
 		die(1, "Failed to create a new window %s: %s", title, err)
 	}
+	if err := win.Fprintf("tag", "Sort "); err != nil {
+		die(1, "Failed to write the tag of %s: %s", title, err)
+	}
 	lw := &listWin{
 		Win:     win,
 		title:   title,
@@ -152,6 +155,10 @@ func (lw *listWin) refresh() {
 	projs := make(map[string]bool)
 	ctxs := make(map[string]bool)
 
+	if err := lw.Addr(","); err != nil {
+		die(1, "Failed to set address for %s: %s", lw.title, err)
+	}
+
 	for _, i := range inds {
 		task := file.Tasks[i]
 		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i, task.String()); err != nil {
@@ -163,22 +170,6 @@ func (lw *listWin) refresh() {
 		for _, t := range task.Tags(todotxt.ContextTag) {
 			ctxs[t] = true
 		}
-	}
-
-	if err := lw.Ctl("cleartag"); err != nil {
-		die(1, "Failed to write cleartag to %s ctl: %s", lw.title, err)
-	}
-
-	tag := "Sort \n"
-	for p := range projs {
-		tag += p + " "
-	}
-	tag += "\n"
-	for c := range ctxs {
-		tag += c + " "
-	}
-	if err := lw.Fprintf("tag", " %s", strings.TrimSpace(tag)); err != nil {
-		die(1, "Failed to write to the tag of %s: %s", lw.title, err)
 	}
 
 	if err := lw.Addr("#0"); err != nil {
