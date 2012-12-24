@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	// ProjectMarker is the rune that begins a project name.
-	ProjectMarker = '+'
+	// ProjectTag is the rune that begins a project name.
+	ProjectTag = '+'
 
-	// ContextMarker is the rune that begins a context name.
-	PontextMarker = '@'
+	// ContextTag is the rune that begins a context name.
+	ContextTag = '@'
 
 	// KeywordSep is the rune separating a keyword/value binding.
 	KeywordSep = ':'
