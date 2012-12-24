@@ -13,25 +13,32 @@ import (
 
 const (
 	// ProjectMarker is the rune that begins a project name.
-	projectMarker = '+'
+	ProjectMarker = '+'
 
 	// ContextMarker is the rune that begins a context name.
-	contextMarker = '@'
+	PontextMarker = '@'
 
 	// KeywordSep is the rune separating a keyword/value binding.
-	keywordSep = ':'
+	KeywordSep = ':'
 
 	// PrioRunes is a string of all valid priority runes.
-	prioRunes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	PrioRunes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	// DateFormat is the format string for dates.
-	dateFormat = "2006-01-02"
+	DateFormat = "2006-01-02"
 )
 
 // A Task is a single line of a todo.txt file.
 type Task struct {
-	LineNo int
-	Text   string
+	text string
+}
+
+// MakeTask returns a task for the given text.  If the text contains
+// newlines then they are interpreted as space characters (' ').
+func MakeTask(text string) Task {
+	text = strings.Replace(text, "\r\n", " ", -1)
+	text = strings.Replace(text, "\n", " ", -1)
+	return Task{text}
 }
 
 // Done returns true if the task is marked as done, otherwise false.
@@ -58,7 +65,7 @@ func (t *Task) CreationDate() time.Time {
 
 // Heaheaderder returns the header information from the task.
 func (t *Task) header() (d bool, dDate time.Time, p string, cDate time.Time) {
-	txt := t.Text
+	txt := t.text
 	d, txt = parseDone(txt)
 	if d {
 		dDate, txt = parseDate(txt)
@@ -81,14 +88,14 @@ func parseDone(s string) (bool, string) {
 // zero time if the string doesn't begin with a time, and the rest of the
 // string.
 func parseDate(s string) (time.Time, string) {
-	if len(s) < len(dateFormat) {
+	if len(s) < len(DateFormat) {
 		return time.Time{}, s
 	}
-	t, err := time.Parse(dateFormat, s[:len(dateFormat)])
+	t, err := time.Parse(DateFormat, s[:len(DateFormat)])
 	if err != nil {
 		return time.Time{}, s
 	}
-	s = s[len(dateFormat):]
+	s = s[len(DateFormat):]
 	if len(s) >= 1 && s[0] == ' ' {
 		s = s[1:]
 	}
@@ -99,7 +106,7 @@ func parseDate(s string) (time.Time, string) {
 // the rest of the string. If the string doesn't begin with a priority then
 // an empty string.
 func parsePriority(s string) (string, string) {
-	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(prioRunes, rune(s[1])) || s[2] != ')' {
+	if len(s) < 3 || s[0] != '(' || !strings.ContainsRune(PrioRunes, rune(s[1])) || s[2] != ')' {
 		return "", s
 	}
 	prio := s[1:2]
@@ -110,21 +117,14 @@ func parsePriority(s string) (string, string) {
 	return prio, s
 }
 
-// Projects returns a slice of all projects for this task.
-func (t *Task) Projects() []string {
-	return t.tags(projectMarker)
-}
-
-// Contexts returns a slice of all contexts for this task.
-func (t *Task) Contexts() []string {
-	return t.tags(contextMarker)
-}
-
-// Tags returns all tags in the text of the task that begin with the
-// given marker.
-func (t *Task) tags(marker rune) []string {
+// Tags returns all tag with the given marker rune.
+// A tag is a white-space delienated field that begins with a marker
+// rune and ends with an alphanumeric or '_' rune.
+// Projects are tags that begin with '+'.
+// Contexts are tags that begin with '@'.
+func (t *Task) Tags(marker rune) []string {
 	var tags []string
-	for _, f := range strings.Fields(t.Text) {
+	for _, f := range strings.Fields(t.text) {
 		if first, _ := utf8.DecodeRuneInString(f); first != marker {
 			continue
 		}
@@ -144,8 +144,8 @@ func tagEnd(r rune) bool {
 // Keywords returns a mapping of all <keyword>:<value> pairs in this task.
 func (t *Task) Keywords() map[string]string {
 	kwds := make(map[string]string)
-	for _, f := range strings.Fields(t.Text) {
-		i := strings.IndexRune(f, keywordSep)
+	for _, f := range strings.Fields(t.text) {
+		i := strings.IndexRune(f, KeywordSep)
 		if i < 0 {
 			continue
 		}

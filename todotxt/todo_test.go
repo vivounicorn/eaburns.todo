@@ -26,7 +26,7 @@ func TestHeader(t *testing.T) {
 		{"x 2012-12-23 2012-12-20", true, "", d(2012, time.December, 23), d(2012, time.December, 20)},
 	}
 	for _, test := range tests {
-		task := &Task{Text: test.text}
+		task := &Task{text: test.text}
 		done, doneDate, prio, addDate := task.header()
 		if done != test.done {
 			t.Errorf("Text [%s] expected done %t, got %t", test.text, test.done, done)
@@ -61,8 +61,8 @@ func TestTags(t *testing.T) {
 		{"+foo+ +bar", '+', []string{"+bar"}},
 	}
 	for _, test := range tests {
-		task := &Task{Text: test.text}
-		tags := task.tags(test.marker)
+		task := &Task{text: test.text}
+		tags := task.Tags(test.marker)
 		sort.Strings(tags)
 		sort.Strings(test.tags)
 		if !reflect.DeepEqual(tags, test.tags) {
