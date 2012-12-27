@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"code.google.com/p/eaburns.todo/todotxt"
@@ -23,7 +24,14 @@ func main() {
 	path = os.Args[1]
 
 	file = readFile()
-	newListWin(nil)
+
+	win := newListWin(nil)
+	if wd, err := os.Getwd(); err != nil {
+		panic("Failed to set dump working directory: " + err.Error())
+	} else {
+		win.Ctl("dumpdir %s", wd)
+		win.Ctl("dump %s", strings.Join(os.Args, " "))
+	}
 
 	wg.Wait()
 }

@@ -23,8 +23,8 @@ type listWin struct {
 	less    func([]todotxt.Task, int, int) bool
 }
 
-// NewListWin creates a new list window for this set of filters.
-func newListWin(filters []string) {
+// NewListWin returns a new list window for this set of filters.
+func newListWin(filters []string) *listWin {
 	sort.Strings(filters)
 
 	title := fmt.Sprintf("%s/%s", path, strings.Join(filters, ""))
@@ -44,6 +44,7 @@ func newListWin(filters []string) {
 	wg.Add(1)
 	go lw.events()
 	lw.refresh()
+	return lw
 }
 
 // lessFuncs is a map of less functions for sorting
