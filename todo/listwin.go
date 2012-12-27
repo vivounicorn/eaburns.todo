@@ -161,7 +161,7 @@ func (lw *listWin) refresh() {
 
 	for _, i := range inds {
 		task := file.Tasks[i]
-		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i, task.String()); err != nil {
+		if _, err := fmt.Fprintf(lw.Data, "%5d. %s\n", i+1, task.String()); err != nil {
 			die(1, "Failed to refresh window %s: %s", lw.title, err)
 		}
 		for _, t := range task.Tags(todotxt.ProjectTag) {
