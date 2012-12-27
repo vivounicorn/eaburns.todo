@@ -37,7 +37,7 @@ func newListWin(filters []string) {
 		Win:     win,
 		title:   title,
 		filters: filters,
-		less:    lessFuncs["line"],
+		less:    lessFuncs["prio"],
 	}
 	wg.Add(1)
 	go lw.events()
