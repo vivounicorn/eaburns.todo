@@ -25,6 +25,8 @@ type listWin struct {
 
 // NewListWin creates a new list window for this set of filters.
 func newListWin(filters []string) {
+	sort.Strings(filters)
+
 	title := fmt.Sprintf("%s/%s", path, strings.Join(filters, ""))
 	win, err := acme.New(title)
 	if err != nil {
@@ -100,24 +102,26 @@ func (lw *listWin) events() {
 				}
 			}
 			if filterOk(fs) {
-				fsNew := make([]string, len(lw.filters))
-				copy(fsNew, lw.filters)
-				for _, f := range fs {
-					found := false
-					for _, f2 := range fsNew {
-						if f == f2 {
-							found = true
-							break
-						}
-					}
-					if !found {
-						fsNew = append(fsNew, f)
-					}
-				}
-				newListWin(fsNew)
+				newListWin(union(fs, lw.filters))
 			}
 		}
 	}
+}
+
+// union returns a new string slice containing the union of the two slices.
+func union(left, right []string) []string {
+	u := make([]string, len(left))
+	copy(u, left)
+outter:
+	for _, r := range right {
+		for _, l := range left {
+			if l == r {
+				continue outter
+			}
+		}
+		u = append(u, r)
+	}
+	return u
 }
 
 // FilterOk returns true if every element of the slice is a valid filter tag.
